@@ -35,7 +35,7 @@ with open("config.yaml", "r", encoding="utf-8") as config_file:
 
 DATABASE_CROSS_REFERENCE = URIRef("http://www.geneontology.org/formats/oboInOwl#hasDbXref")
 
-# 4. Extract entity and relationship using spaCy
+# Extract entity and relationship using spaCy
 
 for question in questions:
 
@@ -59,7 +59,7 @@ for question in questions:
             entity = token.text
 
 
-    # 5. Normalize the extracted entity against ontology
+    # Normalize the extracted entity against ontology
 
     normalized_entity = None
     entity_uri = None
@@ -85,7 +85,7 @@ for question in questions:
                     match_method = "synonym"
                     break
 
-    # 6. Normalize the extracted relationship
+    # Normalize the extracted relationship
 
     normalized_relationship = None
 
@@ -103,7 +103,7 @@ for question in questions:
     print("Normalized extracted relationship:", normalized_relationship)
 
 
-    # 8. Extract metadata and match properties
+    # Extract metadata and match properties
 
     matched_property_uri = None
 
@@ -183,7 +183,7 @@ for question in questions:
         if not result_found:
             print("No metadata value found.")
 
-    # 10. Dynamic metadata values retrieval and Wikidata interoperability
+    # Dynamic metadata values retrieval and Wikidata interoperability
 
     #  Retrieve configured metadata for the matched entity
 
@@ -266,7 +266,7 @@ for question in questions:
         print("\nNo matched entity available for metadata retrieval.")
 
 
-    # 10.2 Retrieve configured metadata from Wikidata
+    # Retrieve configured metadata from Wikidata
 
     wikidata_metadata = [
         item for item in config.get("wikidata_metadata", [])
@@ -336,7 +336,7 @@ for question in questions:
     print("\nSection 10 completed.")
 
 
-    # 11. Linearize retrieved information for MAT AI
+    # Linearize retrieved information for MAT AI
 
     linearized_output = f"""
 QUESTION: {question}
