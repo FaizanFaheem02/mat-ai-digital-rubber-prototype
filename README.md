@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project contains a Python prototype for integrating the MAT AI chatbot with the Digital Rubber Ontology and prepares a linearized output for MAT AI.
+This project contains a Python prototype that enables MAT AI to retrieve relevant information from the Digital Rubber Ontology based on natural-language questions. It identifies entities and relationships, retrieves corresponding information from the Digital Rubber Ontology using SPARQL, and prepares a linearized output to provide context for MAT AI.
 
 ## Installation
 
