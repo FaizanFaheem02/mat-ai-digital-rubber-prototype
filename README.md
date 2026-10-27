@@ -41,4 +41,4 @@ This project contains a Python prototype for integrating the MAT AI chatbot with
 
    ```bash
    python ontology_retrieval.py
-   ```
+   ```# mat-ai-digital-rubber-prototype
