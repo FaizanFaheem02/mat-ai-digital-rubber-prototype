@@ -1,0 +1,5 @@
+rdflib
+spacy
+PyYAML
+sentence-transformers
+requests

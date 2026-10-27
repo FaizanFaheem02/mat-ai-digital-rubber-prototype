@@ -1,0 +1,22 @@
+# Metadata configuration for Digital Rubber ontology
+
+entity_metadata:
+  - name: label
+    language: en
+    enabled: true
+    default: true
+
+  - name: wikidata_id
+    enabled: true
+    default: true
+
+wikidata_metadata:
+  - name: label
+    language: en
+    enabled: true
+    default: true
+
+  - name: description
+    language: en
+    enabled: true
+    default: true
