@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project contains a Python prototype that enables MAT AI to retrieve relevant information from the Digital Rubber Ontology based on natural-language questions. It identifies entities and relationships, retrieves corresponding information from the Digital Rubber Ontology using SPARQL, and prepares a linearized output to provide context for MAT AI.
+This project contains a Python prototype that enables MAT AI to retrieve relevant information from the Digital Rubber Ontology based on natural-language questions. It processes user questions to identify relevent entities and relationships, retrieves corresponding information from the Digital Rubber Ontology using SPARQL, and prepares a linearized output to provide context for MAT AI. 
 
 ## Installation
 
