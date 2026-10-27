@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project contains a Python prototype for integrating the MAT AI chatbot with the Digital Rubber Ontology. It uses spaCy for entity and relationship extraction, Sentence Transformers for semantic matching, and SPARQL queries to retrieve relevant ontology information. It also retrieves configured metadata, including Wikidata identifiers, and prepares a linearised output for MAT AI.
+This project contains a Python prototype for integrating the MAT AI chatbot with the Digital Rubber Ontology and prepares a linearized output for MAT AI.
 
 ## Installation
 
@@ -41,4 +41,4 @@ This project contains a Python prototype for integrating the MAT AI chatbot with
 
    ```bash
    python ontology_retrieval.py
-   ```# mat-ai-digital-rubber-prototype
+   ```
