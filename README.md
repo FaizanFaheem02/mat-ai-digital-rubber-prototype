@@ -8,7 +8,7 @@ The system processes research questions using the following components:
 
 - **GLiNER Decoder:** Extracts entities from natural-language questions.
 - **Qwen2.5-3B:** Extracts relationships requested in the questions.
-- **Sentence Transformer:** Performs semantic similarity matching between extracted entities and relationships and the concepts and properties available in the ontology.
+- **Sentence Transformer:** Performs semantic similarity matching between extracted entities and relationships and the concepts and properties available in the digit rubber ontology.
 
 The extracted entities and relationships are processed independently. The system matches the extracted entities to ontology concepts, compares the extracted relationships with available ontology properties, and retrieves corresponding values.
 
@@ -57,7 +57,7 @@ Download or obtain the model file:
 
 `qwen2.5-3b-instruct-q4_k_m.gguf`
 
-Update the `QWEN_MODEL_PATH` variable in `ontology_retrieval.py` to point to the location of the downloaded model file.
+Update the `QWEN_MODEL_PATH` variable in `mat_ai_digit_rubber_integration.py` to point to the location of the downloaded model file.
 
 ### 5. Configure the ontology
 
@@ -73,5 +73,5 @@ The configuration file defines the entity metadata used by the retrieval pipelin
 Run the following command:
 
 ```bash
-python ontology_retrieval.py
+python mat_ai_digit_rubber_integration.py
 ```
