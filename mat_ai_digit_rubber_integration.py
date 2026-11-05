@@ -785,7 +785,7 @@ def process_question(question):
 
 
 questions = [
-    "What is the definition of rubber?"       
+    "What is the definition of rubber?"    
 
  # "What is the definition of rubber?"
  # "What should we change in the material structure (polymer Mooney, MSR, cis/vinyl/styrene content) in order to increase rebound, but at the same time, have good processability?"        
