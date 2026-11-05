@@ -109,6 +109,14 @@
     
 
 
+    <!-- http://purl.obolibrary.org/obo/DIGITRUBBER_1000063 -->
+
+    <owl:AnnotationProperty rdf:about="http://purl.obolibrary.org/obo/DIGITRUBBER_1000063">
+        <rdfs:label xml:lang="en">Wikidata ID</rdfs:label>
+    </owl:AnnotationProperty>
+    
+
+
     <!-- http://purl.obolibrary.org/obo/DIGITRUBBER_72a5f0d7_2892_45ff_9e35_1440616c382b -->
 
     <owl:AnnotationProperty rdf:about="http://purl.obolibrary.org/obo/DIGITRUBBER_72a5f0d7_2892_45ff_9e35_1440616c382b">
@@ -4605,6 +4613,7 @@ extrudate defined by the manufacturer</obo:IAO_0000115>
 
     <owl:Class rdf:about="http://purl.obolibrary.org/obo/DIGITRUBBER_000048">
         <rdfs:subClassOf rdf:resource="http://purl.obolibrary.org/obo/DIGITRUBBER_000273"/>
+        <obo:DIGITRUBBER_1000063>Q18113858</obo:DIGITRUBBER_1000063>
         <obo:IAO_0000114 rdf:resource="http://purl.obolibrary.org/obo/IAO_0000124"/>
         <obo:IAO_0000115 xml:lang="en">Rubber is an elastic substance made either from the juice of particular tropical trees or artificially. It is raw material for car tires and other technical products.</obo:IAO_0000115>
         <obo:coarseClassification>material entity</obo:coarseClassification>
@@ -4613,7 +4622,6 @@ extrudate defined by the manufacturer</obo:IAO_0000115>
         <dc:language>English</dc:language>
         <pav:lastUpdateOn rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2024-02-19T00:00:00</pav:lastUpdateOn>
         <oboInOwl:creation_date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2023-04-02T00:00:00</oboInOwl:creation_date>
-        <oboInOwl:hasDbXref>Q18113858</oboInOwl:hasDbXref>
         <rdfs:label xml:lang="de">Kautschuk</rdfs:label>
         <rdfs:label xml:lang="en">rubber</rdfs:label>
     </owl:Class>
@@ -9637,12 +9645,12 @@ extrudate defined by the manufacturer</obo:IAO_0000115>
 
     <owl:Class rdf:about="http://purl.obolibrary.org/obo/DIGITRUBBER_1000016">
         <rdfs:subClassOf rdf:resource="http://purl.obolibrary.org/obo/CHEBI_59999"/>
+        <obo:DIGITRUBBER_1000063>Q410572</obo:DIGITRUBBER_1000063>
         <obo:IAO_0000114 rdf:resource="http://purl.obolibrary.org/obo/IAO_0000124"/>
         <obo:IAO_0000115 xml:lang="en">Silane is necessary to act as intermediary between silica and the SBR matrix, and its role is to enhance the dispersion of silica in the SBR matrix.</obo:IAO_0000115>
         <dc:contributor>Arlanxeo</dc:contributor>
         <pav:lastUpdateOn rdf:datatype="http://www.w3.org/2001/XMLSchema#date">19.9.2025</pav:lastUpdateOn>
         <oboInOwl:creation_date rdf:datatype="http://www.w3.org/2001/XMLSchema#date">19.9.2025</oboInOwl:creation_date>
-        <oboInOwl:hasDbXref>Q410572</oboInOwl:hasDbXref>
         <rdfs:label xml:lang="de">Silan</rdfs:label>
         <rdfs:label xml:lang="en">silane</rdfs:label>
     </owl:Class>

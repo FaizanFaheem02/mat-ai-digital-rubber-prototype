@@ -104,6 +104,8 @@ SYNONYM = URIRef("http://purl.obolibrary.org/obo/IAO_0000118")
 
 DATABASE_CROSS_REFERENCE = URIRef("http://www.geneontology.org/formats/oboInOwl#hasDbXref")
 
+WIKIDATA_ID = URIRef("http://purl.obolibrary.org/obo/DIGITRUBBER_1000063")
+
 
 # 6. LOAD YAML CONFIGURATION
 
@@ -227,6 +229,7 @@ Return ONLY valid JSON:
     except (json.JSONDecodeError, AttributeError, TypeError):
         logging.exception("Qwen returned invalid JSON.")
         return []
+
 
 
 # 9. ONTOLOGY ENTITY NORMALIZATION
@@ -560,27 +563,18 @@ def retrieve_entity_metadata(entity_uri):
 
         elif item["name"] == "wikidata_id":
 
-
-
             entity_query_parts.append("""OPTIONAL {
-
-                    ENTITY_URI oboInOwl:hasDbXref
-
+                    ENTITY_URI WIKIDATA_PROPERTY
                     ?entity_wikidata_id .
-
                 }
-
                 """.replace(
-
                     "ENTITY_URI",
-
                     URIRef(entity_uri).n3()
-
+                ).replace(
+                    "WIKIDATA_PROPERTY",
+                    WIKIDATA_ID.n3()
                 )
-
             )
-
-
 
             selected_variables.append("?entity_wikidata_id")
 
@@ -717,6 +711,7 @@ def process_question(question):
 
     logging.info("Qwen relationship list: %s", relationship_list)
 
+    matched_entities = {}
     # STEP 3: Match and retrieve metadata for each entity independently.
     for original_entity in entity_list:
         logging.info("=" * 60)
@@ -728,6 +723,9 @@ def process_question(question):
         class_metadata = {}
 
         if entity_uri:
+
+            matched_entities[original_entity] = entity_uri
+
             logging.info(
                 "STEP 3/5: Ontology entity matched: '%s' -> '%s' (method: %s)",
                 original_entity,
@@ -747,17 +745,36 @@ def process_question(question):
 
         output["classes"][original_entity] = class_metadata
 
-    # STEP 4: Match each extracted relationship independently against
-    # the global DigiRubber property vocabulary.
+
+    # STEP 4: Match relationships globally and retrieve their values.
     for relationship in relationship_list:
         logging.info(
             "Matching Qwen relationship '%s' against all global ontology properties.",
             relationship,
         )
+
         output["properties"][relationship] = {}
+
         property_match = match_ontology_property(relationship)
+
         if property_match:
-            output["properties"][relationship] = property_match
+            property_metadata = property_match.copy()
+            property_values = {}
+
+            for entity_name, entity_uri in matched_entities.items():
+                values = retrieve_metadata(
+                    entity_uri,
+                    property_match["uri"]
+                )
+
+                if values:
+                    property_values[entity_name] = values
+
+            if property_values:
+                property_metadata["values"] = property_values
+
+            output["properties"][relationship] = property_metadata
+
 
     logging.info("Question processing completed.")
     return output
@@ -767,10 +784,13 @@ def process_question(question):
 
 
 
-questions = ["Who is the contributor to silane?"
+questions = [
+    "What is the definition of rubber?"       
 
  # "What is the definition of rubber?"
- #  "What should we change in the material structure (polymer Mooney, MSR, cis/vinyl/styrene content) in order to increase rebound, but at the same time, have good processability?"        
+ # "What should we change in the material structure (polymer Mooney, MSR, cis/vinyl/styrene content) in order to increase rebound, but at the same time, have good processability?"        
+ # "Who is the contributor to silane?"
+ # "Is Die Swell dependent on any polymer-related property (polymer Mooney, MSR, microstructure)"
 ]
 
 
