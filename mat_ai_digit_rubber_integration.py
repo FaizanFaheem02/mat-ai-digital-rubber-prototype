@@ -158,11 +158,11 @@ Extract the relationship or property requested in the original question for each
 INSTRUCTIONS:
 
 1. Analyse the original question to identify the relationship or property being requested.
-2. Return only the relationshion, not the complete question or sentence.
+2. Return only the relationships, not the complete question or sentence.
 3. Do not include the entity name in the relationship.
 4. Remove unnecessary grammatical words when they are not part of the relationship meaning.
 5. Preserve the original scientific meaning.
-6. Use concise relationship phrases suitable for semantic matching against ontology property labels.
+6. Use concise relationship suitable for semantic matching against ontology property labels.
 7. Do not restrict relationships to predefined categories or a fixed vocabulary.
 8. Do not generate answers.
 9. Do not invent relationships.
