@@ -7,10 +7,8 @@ This project contains a Python prototype that enables MAT AI to retrieve relevan
 The system processes research questions using the following components:
 
 - **GLiNER Decoder:** Extracts entities from natural-language questions.
-- **Qwen2.5-3B:** Extracts relationships and properties requested in the questions.
+- **Qwen2.5-3B:** Extracts relationships requested in the questions.
 - **Sentence Transformer:** Performs semantic similarity matching between extracted entities and relationships and the concepts and properties available in the ontology.
-- **DigiRubber Ontology:** Provides the scientific knowledge base for entity matching and information retrieval.
-- **SPARQL:** Retrieves corresponding information from the ontology.
 
 The extracted entities and relationships are processed independently. The system matches the extracted entities to ontology concepts, compares the extracted relationships with available ontology properties, and retrieves corresponding values.
 
