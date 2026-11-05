@@ -1,76 +1,67 @@
 # MAT AI – Digital Rubber Ontology Prototype
 
-## Overview
+## 1. Overview
 
-This project contains a Python prototype that enables MAT AI to retrieve relevant information from the Digital Rubber Ontology based on natural-language questions.
+This project contains a Python prototype designed to integrate the MAT AI partner chatbot with the DigiRubber ontology. It processes natural-language questions, extracts entities and relationships, matches them against the ontology, and returns structured JSON output for MAT AI.
 
-The system processes research questions using the following components:
+## 2. Technologies Used
 
-- **GLiNER Decoder:** Extracts entities from natural-language questions.
-- **Qwen2.5-3B:** Extracts relationships requested in the questions.
-- **Sentence Transformer:** Performs semantic similarity matching between extracted entities and relationships and the concepts and properties available in the digit rubber ontology.
+- **GLiNER Decoder:** Entity extraction.
+- **Qwen2.5-3B-Instruct:** Relationship extraction.
+- **Sentence Transformers:** Semantic similarity matching.
+- **RDFLib:** Loading and querying the DigiRubber ontology.
+- **SPARQL:** Ontology data retrieval.
 
-The extracted entities and relationships are processed independently. The system matches the extracted entities to ontology concepts, compares the extracted relationships with available ontology properties, and retrieves corresponding values.
+## 3. Installation
 
-The results are returned as structured JSON, which can be used to provide relevant context to MAT AI.
-
-
-## Installation
-
-### 1. Clone the repository
+Clone the repository:
 
 ```bash
 git clone https://github.com/FaizanFaheem02/mat-ai-digital-rubber-prototype.git
-
 cd mat-ai-digital-rubber-prototype
 ```
 
-### 2. Set up Python
-
-Python 3.11.9 is recommended for the current implementation.
-
-Create a virtual environment:
+Create and activate a virtual environment:
 
 ```bash
 python -m venv .venv
 ```
 
-Activate it on Windows:
+On Windows:
 
 ```powershell
 .venv\Scripts\activate
 ```
 
-### 3. Install dependencies
+Install the required dependencies:
 
 ```bash
-python -m pip install --upgrade pip
-
 pip install -r requirements.txt
 ```
 
-### 4. Configure the Qwen model
+## 4. Configure the Qwen Model
 
 The prototype uses the Qwen2.5-3B-Instruct model in GGUF format through `llama-cpp-python`.
 
-Download or obtain the model file:
+Download or obtain the following model file:
 
 `qwen2.5-3b-instruct-q4_k_m.gguf`
 
-Update the `QWEN_MODEL_PATH` variable in `mat_ai_digit_rubber_integration.py` to point to the location of the downloaded model file.
+Create the following directory structure inside the project folder:
 
-### 5. Configure the ontology
+```text
+models/
+└── qwen/
+    └── qwen2.5-3b-instruct-q4_k_m.gguf
+```
 
-Ensure that the following files are available in the project directory:
+Place the downloaded model file inside the `models/qwen/` directory. The Python script automatically locates the model from this directory, so no manual path configuration is required.
 
-- `digitrubber-edit.owl`
-- `config.yaml`
+**Note:** Please note that GGUF model file is not included in the GitHub repository and must be downloaded separately.
 
-The configuration file defines the entity metadata used by the retrieval pipeline.
+## 5. Run the Prototype
 
-## Running the Prototype
-
-Run the following command:
+Run the main Python script:
 
 ```bash
 python mat_ai_digit_rubber_integration.py

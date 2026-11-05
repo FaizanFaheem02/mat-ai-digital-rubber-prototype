@@ -8,6 +8,7 @@ import rdflib
 
 import logging
 import re
+from pathlib import Path
 
 
 
@@ -35,11 +36,12 @@ MIN_PROPERTY_SIMILARITY = 0.35
 
 
 
-QWEN_MODEL_PATH = (
-    r"C:\Users\faheemf\Documents\entity-extraction"
-    r"\models\qwen\qwen2.5-3b-instruct-q4_k_m.gguf"
-)
+PROJECT_DIR = Path(__file__).resolve().parent
 
+QWEN_MODEL_PATH = str(
+    PROJECT_DIR / "models" / "qwen" /
+    "qwen2.5-3b-instruct-q4_k_m.gguf"
+)
 
 
 ONTOLOGY_PATH = "digitrubber-edit.owl"
