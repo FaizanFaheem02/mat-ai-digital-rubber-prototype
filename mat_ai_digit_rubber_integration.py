@@ -319,111 +319,142 @@ def retrieve_synonyms(entity_uri):
     return synonyms
 
 
-# 11. MATCH ONTOLOGY PROPERTY
+# 11. MATCH ONTOLOGY PROPERTY GLOBALLY
 
 
-
-def match_ontology_property(entity_uri, relationship):
-    """Semantically match against meaningful predicates used on this entity."""
-    if not entity_uri or not relationship:
+def match_ontology_property(relationship):
+    
+    if not isinstance(relationship, str) or not relationship.strip():
         return None
 
-    excluded_predicates = {str(RDF.type), str(RDFS.label), str(RDFS.comment), str(RDFS.subClassOf), str(RDFS.subPropertyOf), str(OWL.equivalentClass), str(OWL.disjointWith), str(SYNONYM), str(DATABASE_CROSS_REFERENCE)}
-    excluded_local_names = {
-        "type", "label", "comment", "subclassof", "subpropertyof",
-        "equivalentclass", "disjointwith", "hascurationstatus",
-        "creationdate", "createdby", "modified", "modifieddate", "lastupdateon",
-        "date", "source", "isdefinedby", "deprecated",
-        "hasdbxref", "id", "iri", "language", "importedfrom",
-        "importedontology", "ontologyiri", "ontologyversion",
-        "versioniri", "priorversion", "backwardcompatiblewith"
+    relationship_text = relationship.strip()
+    relationship_key = relationship_text.casefold()
+
+    excluded_predicates = {
+        RDF.type,
+        RDFS.label,
+        RDFS.comment,
+        RDFS.subClassOf,
+        RDFS.subPropertyOf,
+        OWL.equivalentClass,
+        OWL.disjointWith,
+        OWL.inverseOf,
+        OWL.imports,
     }
 
-    entity_key = str(entity_uri)
-    if entity_key not in property_embedding_cache:
+    cache_key = "global_ontology_property_vocabulary"
+
+    if cache_key not in property_embedding_cache:
         candidates = []
         seen_predicates = set()
 
-        for predicate in graph.predicates(entity_uri, None):
-            predicate_uri = str(predicate)
-            local_name = predicate_uri.rsplit("/", 1)[-1].rsplit("#", 1)[-1]
-            normalized_local = re.sub(r"[^a-z0-9]", "", local_name.lower())
-
-            if predicate_uri in excluded_predicates or normalized_local in excluded_local_names:
+        for predicate in set(graph.predicates()):
+            if not isinstance(predicate, URIRef) or predicate in excluded_predicates:
                 continue
             if predicate in seen_predicates:
                 continue
             seen_predicates.add(predicate)
 
-            property_label = graph.value(predicate, LABEL)
-            property_name = (
-                str(property_label).strip()
-                if property_label
-                else local_name.strip()
-            )
-            if not property_name:
-                continue
+            predicate_uri = str(predicate)
+            local_name = predicate_uri.rsplit("/", 1)[-1].rsplit("#", 1)[-1].strip()
 
-            property_synonyms = [
+            label_values = [
+                str(value).strip()
+                for value in graph.objects(predicate, LABEL)
+                if str(value).strip()
+            ]
+            synonym_values = [
                 str(value).strip()
                 for value in graph.objects(predicate, SYNONYM)
                 if str(value).strip()
             ]
-            candidate_text = ". ".join([property_name] + property_synonyms)
+
+            aliases = []
+            for alias in label_values + synonym_values + ([local_name] if local_name else []):
+                if alias and alias.casefold() not in {item.casefold() for item in aliases}:
+                    aliases.append(alias)
+
+            if not aliases:
+                continue
+
+            display_label = label_values[0] if label_values else (
+                synonym_values[0] if synonym_values else local_name
+            )
 
             candidates.append({
                 "uri": predicate,
-                "name": property_name,
-                "text": candidate_text
+                "label": display_label,
+                "aliases": aliases,
             })
 
-        if not candidates:
-            property_embedding_cache[entity_key] = None
-        else:
-            candidate_embeddings = relationship_model.encode(
-                [item["text"] for item in candidates],
-                convert_to_tensor=True,
-                normalize_embeddings=True
-            )
-            property_embedding_cache[entity_key] = (
-                candidates, candidate_embeddings
-            )
+        # Exact label/synonym/local-name matches are checked before embeddings.
+        property_embedding_cache[cache_key] = candidates
 
-    cached_properties = property_embedding_cache[entity_key]
-    if cached_properties is None:
-        logging.warning(
-            "No eligible scientific ontology properties found for entity: %s",
-            entity_uri
-        )
+    candidates = property_embedding_cache[cache_key]
+
+    if not candidates:
+        logging.warning("No global ontology property candidates were found.")
         return None
 
-    candidates, candidate_embeddings = cached_properties
-    relationship_embedding = relationship_model.encode(
-        relationship,
+    # First: exact match against labels, synonyms, or the predicate local name.
+    for candidate in candidates:
+        for alias in candidate["aliases"]:
+            if relationship_key == alias.casefold():
+                logging.info(
+                    "Exact global ontology property match: '%s' -> '%s'",
+                    relationship_text,
+                    candidate["label"],
+                )
+                return {
+                    "uri": str(candidate["uri"]),
+                    "label": candidate["label"],
+                }
+
+    alias_records = []
+    for candidate in candidates:
+        for alias in candidate["aliases"]:
+            alias_records.append((candidate, alias))
+
+    alias_embeddings = relationship_model.encode(
+        [alias for _, alias in alias_records],
         convert_to_tensor=True,
-        normalize_embeddings=True
+        normalize_embeddings=True,
+    )
+    relationship_embedding = relationship_model.encode(
+        relationship_text,
+        convert_to_tensor=True,
+        normalize_embeddings=True,
     )
     similarity_scores = util.cos_sim(
-        relationship_embedding, candidate_embeddings
+        relationship_embedding,
+        alias_embeddings,
     )[0]
 
     best_index = int(similarity_scores.argmax().item())
     best_score = float(similarity_scores[best_index].item())
-    best_candidate = candidates[best_index]
+    best_candidate, best_alias = alias_records[best_index]
 
     logging.info(
-        "Best eligible ontology property candidate: '%s' -> '%s' "
-        "(cosine similarity: %.4f)",
-        relationship, best_candidate["name"], best_score
+        "Best global ontology property candidate: '%s' -> '%s' "
+        "(matched alias: '%s'; cosine similarity: %.4f)",
+        relationship_text,
+        best_candidate["label"],
+        best_alias,
+        best_score,
     )
+
     if best_score < MIN_PROPERTY_SIMILARITY:
         logging.warning(
             "Property match rejected: similarity %.4f is below the minimum %.2f.",
-            best_score, MIN_PROPERTY_SIMILARITY
+            best_score,
+            MIN_PROPERTY_SIMILARITY,
         )
         return None
 
-    return best_candidate["uri"]
+    return {
+        "uri": str(best_candidate["uri"]),
+        "label": best_candidate["label"],
+    }
 
 
 # 12. RETRIEVE PROPERTY VALUES USING SPARQL
@@ -652,7 +683,6 @@ def retrieve_entity_metadata(entity_uri):
 
 
 def process_question(question):
-
     output = {"classes": {}, "properties": {}}
 
     logging.info("=" * 70)
@@ -672,7 +702,7 @@ def process_question(question):
             logging.info(
                 "GLiNER entity: %s (confidence: %.4f)",
                 item.get("text", ""),
-                float(item.get("score", 0.0))
+                float(item.get("score", 0.0)),
             )
     else:
         logging.warning("GLiNER did not extract any entities.")
@@ -691,16 +721,14 @@ def process_question(question):
 
     logging.info("Qwen relationship list: %s", relationship_list)
 
-    # STEP 3: Process each entity and match it to DigiRubber.
+    # STEP 3: Match and retrieve metadata for each entity independently.
     for original_entity in entity_list:
-
         logging.info("=" * 60)
         logging.info("PROCESSING ENTITY: %s", original_entity)
 
         normalized_entity, entity_uri, match_method = normalize_entity(
             original_entity
         )
-
         class_metadata = {}
 
         if entity_uri:
@@ -708,81 +736,32 @@ def process_question(question):
                 "STEP 3/5: Ontology entity matched: '%s' -> '%s' (method: %s)",
                 original_entity,
                 normalized_entity,
-                match_method
+                match_method,
             )
 
-            configured_metadata = retrieve_entity_metadata(entity_uri)
-            class_metadata.update(configured_metadata)
-
+            class_metadata.update(retrieve_entity_metadata(entity_uri))
             synonyms = retrieve_synonyms(entity_uri)
             if synonyms:
                 class_metadata["synonym"] = synonyms
-
         else:
             logging.warning(
                 "STEP 3/5: Entity not found in DigiRubber ontology: %s",
-                original_entity
+                original_entity,
             )
 
         output["classes"][original_entity] = class_metadata
-        entity_properties = {}
 
-        if not entity_uri:
-            output["properties"][original_entity] = entity_properties
-            continue
-
-        if not relationship_list:
-            logging.info(
-                "No extracted relationships to compare for entity '%s'.",
-                original_entity
-            )
-
-        for relationship in relationship_list:
-            logging.info(
-                "Comparing Qwen relationship '%s' against ontology properties "
-                "of entity '%s'.",
-                relationship,
-                original_entity
-            )
-
-            property_uri = match_ontology_property(entity_uri, relationship)
-
-            if not property_uri:
-                logging.warning(
-                    "No ontology property candidates found for entity '%s'.",
-                    original_entity
-                )
-                continue
-
-            logging.info(
-                "STEP 5/5: Retrieving value for entity '%s' and relationship '%s'...",
-                original_entity,
-                relationship
-            )
-
-            property_values = retrieve_metadata(entity_uri, property_uri)
-
-            if not property_values:
-                logging.info(
-                    "No SPARQL value for entity '%s' and relationship '%s'.",
-                    original_entity,
-                    relationship
-                )
-                continue
-
-            logging.info(
-                "SPARQL result for entity '%s', relationship '%s': %s",
-                original_entity,
-                relationship,
-                property_values
-            )
-
-            if len(property_values) == 1:
-                entity_properties[relationship] = property_values[0]
-            else:
-                entity_properties[relationship] = property_values
-
-        output["properties"][original_entity] = entity_properties
+    # STEP 4: Match each extracted relationship independently against
+    # the global DigiRubber property vocabulary.
+    for relationship in relationship_list:
+        logging.info(
+            "Matching Qwen relationship '%s' against all global ontology properties.",
+            relationship,
+        )
+        output["properties"][relationship] = {}
+        property_match = match_ontology_property(relationship)
+        if property_match:
+            output["properties"][relationship] = property_match
 
     logging.info("Question processing completed.")
     return output
@@ -792,7 +771,7 @@ def process_question(question):
 
 
 
-questions = ["Who is the contributor to silane?"]
+questions = ["What should we change in the material structure (polymer Mooney, MSR, cis/vinyl/styrene content) in order to increase rebound, but at the same time, have good processability?"]
 
 
 # 17. EXECUTE PIPELINE AND OUTPUT JSON
