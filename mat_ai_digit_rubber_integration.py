@@ -30,7 +30,6 @@ GLINER_MODEL_NAME = "knowledgator/gliner-decoder-small-v1.0"
 
 SENTENCE_TRANSFORMER_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
-# Reject weak semantic matches rather than returning unrelated ontology data.
 MIN_ENTITY_SIMILARITY = 0.75
 MIN_PROPERTY_SIMILARITY = 0.35
 
@@ -38,10 +37,7 @@ MIN_PROPERTY_SIMILARITY = 0.35
 
 PROJECT_DIR = Path(__file__).resolve().parent
 
-QWEN_MODEL_PATH = str(
-    PROJECT_DIR / "models" / "qwen" /
-    "qwen2.5-3b-instruct-q4_k_m.gguf"
-)
+QWEN_MODEL_PATH = str(PROJECT_DIR / "models" / "qwen" / "qwen2.5-3b-instruct-q4_k_m.gguf")
 
 
 ONTOLOGY_PATH = "digitrubber-edit.owl"
@@ -119,7 +115,6 @@ with open(CONFIG_PATH, "r", encoding="utf-8") as config_file:
 # 7. GLiNER ENTITY EXTRACTION
 
 
-
 def extract_entities(question):
 
 
@@ -128,7 +123,6 @@ def extract_entities(question):
 
 
 # 8. QWEN RELATIONSHIP EXTRACTION
-
 
 
 def extract_relationships(question, extracted_entities):
