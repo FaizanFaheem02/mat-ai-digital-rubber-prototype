@@ -516,155 +516,62 @@ def retrieve_metadata(entity_uri, property_uri):
 
 # 13. RETRIEVE CONFIGURED ENTITY METADATA
 
-
-
 def retrieve_entity_metadata(entity_uri):
-
-
-
     metadata = {}
 
+    entity_uri = URIRef(entity_uri)
 
-
-    entity_metadata = [
-
-        item
-
-        for item in config.get("entity_metadata", [])
-
-        if item.get("enabled", False)
-
-        and item.get("default", False)
-
-    ]
-
-
-
-    entity_query_parts = []
-
-    selected_variables = []
-
-
-
-    for item in entity_metadata:
-
-
-
-        if item["name"] == "label":
-
-
-
-            entity_query_parts.append(""" OPTIONAL {ENTITY_URI rdfs:label ?entity_label .FILTER(LANG(?entity_label) = "LANGUAGE")}""".replace("ENTITY_URI", URIRef(entity_uri).n3()).replace("LANGUAGE", item.get("language", "en")))
-
-
-            selected_variables.append("?entity_label")
-
-
-
-        elif item["name"] == "wikidata_id":
-
-            entity_query_parts.append("""OPTIONAL {
-                    ENTITY_URI WIKIDATA_PROPERTY
-                    ?entity_wikidata_id .
-                }
-                """.replace(
-                    "ENTITY_URI",
-                    URIRef(entity_uri).n3()
-                ).replace(
-                    "WIKIDATA_PROPERTY",
-                    WIKIDATA_ID.n3()
-                )
-            )
-
-            selected_variables.append("?entity_wikidata_id")
-
-
-
-    if not entity_query_parts:
-
-        return metadata
-
-
-
-    entity_sparql_template = """
-
-    PREFIX rdfs:
-
-    <http://www.w3.org/2000/01/rdf-schema#>
-
-
-
-    PREFIX oboInOwl:
-
-    <http://www.geneontology.org/formats/oboInOwl#>
-
-
-
-    SELECT SELECTED_VARIABLES
-
-    WHERE {
-
-        METADATA_PATTERNS
-
-    }
-
-    """
-
-
-
-    entity_query = (
-
-        entity_sparql_template
-
-        .replace(
-
-            "SELECTED_VARIABLES",
-
-            " ".join(selected_variables)
-
-        )
-
-        .replace(
-
-            "METADATA_PATTERNS",
-
-            "\n".join(entity_query_parts)
-
-        )
-
+    annotation_property_type = URIRef(
+        "http://www.w3.org/2002/07/owl#AnnotationProperty"
     )
 
+    annotation_values = {}
 
+    for predicate, value in graph.predicate_objects(entity_uri):
 
-    entity_results = graph.query(entity_query)
+        # Retrieve only predicates declared as annotation properties.
+        if (predicate, RDF.type, annotation_property_type) not in graph:
+            continue
 
+        # Get the annotation property's label, if available.
+        property_labels = list(graph.objects(predicate, RDFS.label))
 
+        english_labels = [
+            label for label in property_labels
+            if getattr(label, "language", None) == "en"
+        ]
 
-    for result in entity_results:
+        if english_labels:
+            property_name = str(english_labels[0])
+        elif property_labels:
+            property_name = str(property_labels[0])
+        else:
+            property_name = predicate.split("/")[-1].split("#")[-1]
 
+        # Convert the property label into a JSON-friendly key.
+        key = "".join(
+            character.lower() if character.isalnum() else "_"
+            for character in property_name
+        ).strip("_")
 
+        while "__" in key:
+            key = key.replace("__", "_")
 
-        if result.entity_label:
+        # Preserve language distinctions for language-tagged values.
+        language = getattr(value, "language", None)
+        if language and language.lower() != "en":
+            key = f"{key}_{language.lower()}"
 
+        # Preserve the value as text.
+        annotation_values.setdefault(key, []).append(str(value))
 
-
-            metadata["label"] = str(result.entity_label)
-
-
-
-        if result.entity_wikidata_id:
-
-
-
-            metadata["wikidata_id"] = (
-
-                str(result.entity_wikidata_id).strip()
-
-            )
-
-
+    # Keep single values as strings and multiple values as lists.
+    for key, values in annotation_values.items():
+        metadata[key] = values[0] if len(values) == 1 else values
 
     return metadata
+
+
 
 
 
@@ -734,9 +641,6 @@ def process_question(question):
             )
 
             class_metadata.update(retrieve_entity_metadata(entity_uri))
-            synonyms = retrieve_synonyms(entity_uri)
-            if synonyms:
-                class_metadata["synonym"] = synonyms
         else:
             logging.warning(
                 "STEP 3/5: Entity not found in DigiRubber ontology: %s",
@@ -785,11 +689,11 @@ def process_question(question):
 
 
 questions = [
-    "What is the definition of rubber?"    
+  #  "What should we change in the material structure (polymer Mooney, MSR, cis/vinyl/styrene content) in order to increase rebound, but at the same time, have good processability?"           
 
  # "What is the definition of rubber?"
  # "What should we change in the material structure (polymer Mooney, MSR, cis/vinyl/styrene content) in order to increase rebound, but at the same time, have good processability?"        
- # "Who is the contributor to silane?"
+  "Who is the contributor to silane?"
  # "Is Die Swell dependent on any polymer-related property (polymer Mooney, MSR, microstructure)"
 ]
 
