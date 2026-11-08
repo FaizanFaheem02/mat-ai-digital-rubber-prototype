@@ -3,3 +3,5 @@ PyYAML
 sentence-transformers
 gliner
 llama-cpp-python
+fastapi
+uvicorn

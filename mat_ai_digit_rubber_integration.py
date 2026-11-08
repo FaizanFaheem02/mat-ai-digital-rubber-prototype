@@ -40,9 +40,9 @@ PROJECT_DIR = Path(__file__).resolve().parent
 QWEN_MODEL_PATH = str(PROJECT_DIR / "models" / "qwen" / "qwen2.5-3b-instruct-q4_k_m.gguf")
 
 
-ONTOLOGY_PATH = "digitrubber-edit.owl"
+ONTOLOGY_PATH = PROJECT_DIR / "digitrubber-edit.owl"
 
-CONFIG_PATH = "config.yaml"
+CONFIG_PATH = PROJECT_DIR / "config.yaml"
 
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -684,59 +684,35 @@ def process_question(question):
     return output
 
 
-# 16. TEST QUESTIONS
 
+# 16. TEST QUESTIONS AND SCRIPT EXECUTION
 
+if __name__ == "__main__":
 
-questions = [
+    questions = [
+        "Who is the contributor to silane?"
+    ]
+
+    try:
+        for question in questions:
+
+            result = process_question(question)
+
+            print(
+                json.dumps(
+                    result,
+                    indent=4,
+                    ensure_ascii=False
+                )
+            )
+
+    finally:
+        qwen_model.close()
+        logging.info("Qwen model resources released.")
+
   #  "What should we change in the material structure (polymer Mooney, MSR, cis/vinyl/styrene content) in order to increase rebound, but at the same time, have good processability?"           
 
  # "What is the definition of rubber?"
  # "What should we change in the material structure (polymer Mooney, MSR, cis/vinyl/styrene content) in order to increase rebound, but at the same time, have good processability?"        
-  "Who is the contributor to silane?"
+ # "Who is the contributor to silane?"
  # "Is Die Swell dependent on any polymer-related property (polymer Mooney, MSR, microstructure)"
-]
-
-
-# 17. EXECUTE PIPELINE AND OUTPUT JSON
-
-
-try:
-
-
-
-    for question in questions:
-
-
-
-        result = process_question(question)
-
-
-
-        # Print only valid JSON to standard output.
-
-        print(
-
-            json.dumps(
-
-                result,
-
-                indent=4,
-
-                ensure_ascii=False
-
-            )
-
-        )
-
-
-
-finally:
-
-
-
-    qwen_model.close()
-
-
-
-    logging.info("Qwen model resources released.")
