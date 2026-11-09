@@ -102,8 +102,6 @@ LABEL = RDFS.label
 SYNONYM = URIRef("http://purl.obolibrary.org/obo/IAO_0000118")
 
 
-DATABASE_CROSS_REFERENCE = URIRef("http://www.geneontology.org/formats/oboInOwl#hasDbXref")
-
 WIKIDATA_ID = URIRef("http://purl.obolibrary.org/obo/DIGITRUBBER_1000063")
 
 
