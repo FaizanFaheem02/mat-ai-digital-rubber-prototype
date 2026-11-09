@@ -514,7 +514,20 @@ def retrieve_metadata(entity_uri, property_uri):
 
 
 
-# 13. RETRIEVE CONFIGURED ENTITY METADATA
+# 13. RETRIEVE WIKIDATA ID INDEPENDENTLY
+
+def retrieve_wikidata_id(entity_uri):
+    """Retrieve the Wikidata ID annotation for an ontology entity."""
+    entity_uri = URIRef(entity_uri)
+    wikidata_id = graph.value(entity_uri, WIKIDATA_ID)
+
+    if wikidata_id is None:
+        return None
+
+    return str(wikidata_id).strip()
+
+
+# 14. RETRIEVE CONFIGURED ENTITY METADATA
 
 def retrieve_entity_metadata(entity_uri):
     metadata = {}
@@ -528,6 +541,10 @@ def retrieve_entity_metadata(entity_uri):
     annotation_values = {}
 
     for predicate, value in graph.predicate_objects(entity_uri):
+
+        # Wikidata ID retrieval is handled by retrieve_wikidata_id().
+        if predicate == WIKIDATA_ID:
+            continue
 
         # Retrieve only predicates declared as annotation properties.
         if (predicate, RDF.type, annotation_property_type) not in graph:
@@ -641,6 +658,10 @@ def process_question(question):
             )
 
             class_metadata.update(retrieve_entity_metadata(entity_uri))
+
+            wikidata_id = retrieve_wikidata_id(entity_uri)
+            if wikidata_id:
+                class_metadata["wikidata_id"] = wikidata_id
         else:
             logging.warning(
                 "STEP 3/5: Entity not found in DigiRubber ontology: %s",
