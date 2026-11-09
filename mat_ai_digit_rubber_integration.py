@@ -239,7 +239,6 @@ def normalize_entity(entity):
     candidates = []
     seen = set()
 
-    # Only consider resources explicitly declared as ontology classes.
     class_types = {OWL.Class, RDFS.Class}
     ontology_classes = {
         subject
@@ -569,11 +568,9 @@ def retrieve_entity_metadata(entity_uri):
 
     for predicate, value in graph.predicate_objects(entity_uri):
 
-        # Wikidata ID retrieval is handled by retrieve_wikidata_id().
         if predicate == WIKIDATA_ID:
             continue
 
-        # Retrieve only predicates declared as annotation properties.
         if (predicate, RDF.type, annotation_property_type) not in graph:
             continue
 
