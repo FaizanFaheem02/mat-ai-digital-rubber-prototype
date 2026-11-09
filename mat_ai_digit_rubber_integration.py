@@ -243,19 +243,29 @@ def normalize_entity(entity):
     candidates = []
     seen = set()
 
-    for subject, label in graph.subject_objects(LABEL):
-        text = str(label).strip()
-        key = (str(subject), text.lower())
-        if text and key not in seen:
-            candidates.append({"uri": subject, "text": text, "source": "label"})
-            seen.add(key)
+    # Only consider resources explicitly declared as ontology classes.
+    class_types = {OWL.Class, RDFS.Class}
+    ontology_classes = {
+        subject
+        for class_type in class_types
+        for subject in graph.subjects(RDF.type, class_type)
+        if isinstance(subject, URIRef)
+    }
 
-    for subject, synonym in graph.subject_objects(SYNONYM):
-        text = str(synonym).strip()
-        key = (str(subject), text.lower())
-        if text and key not in seen:
-            candidates.append({"uri": subject, "text": text, "source": "synonym"})
-            seen.add(key)
+    for subject in ontology_classes:
+        for label in graph.objects(subject, LABEL):
+            text = str(label).strip()
+            key = (str(subject), text.casefold())
+            if text and key not in seen:
+                candidates.append({"uri": subject, "text": text, "source": "label"})
+                seen.add(key)
+
+        for synonym in graph.objects(subject, SYNONYM):
+            text = str(synonym).strip()
+            key = (str(subject), text.casefold())
+            if text and key not in seen:
+                candidates.append({"uri": subject, "text": text, "source": "synonym"})
+                seen.add(key)
 
     if not candidates:
         return None, None, None
@@ -347,8 +357,29 @@ def match_ontology_property(relationship):
         candidates = []
         seen_predicates = set()
 
-        for predicate in set(graph.predicates()):
-            if not isinstance(predicate, URIRef) or predicate in excluded_predicates:
+        # Only consider resources explicitly declared as RDF/OWL properties.
+        property_types = {
+            RDF.Property,
+            OWL.ObjectProperty,
+            OWL.DatatypeProperty,
+            OWL.AnnotationProperty,
+            OWL.FunctionalProperty,
+            OWL.InverseFunctionalProperty,
+            OWL.TransitiveProperty,
+            OWL.SymmetricProperty,
+            OWL.AsymmetricProperty,
+            OWL.ReflexiveProperty,
+            OWL.IrreflexiveProperty,
+        }
+        declared_properties = {
+            subject
+            for property_type in property_types
+            for subject in graph.subjects(RDF.type, property_type)
+            if isinstance(subject, URIRef)
+        }
+
+        for predicate in declared_properties:
+            if predicate in excluded_predicates:
                 continue
             if predicate in seen_predicates:
                 continue
@@ -711,7 +742,7 @@ def process_question(question):
 if __name__ == "__main__":
 
     questions = [
-        "Who is the contributor to silane?"
+        "What is the definition of rubber?"
     ]
 
     try:
