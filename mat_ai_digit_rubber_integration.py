@@ -117,8 +117,6 @@ with open(CONFIG_PATH, "r", encoding="utf-8") as config_file:
 
 def extract_entities(question):
 
-
-
     return entity_model.predict_entities(question, labels=["label"], threshold=0.3, num_gen_sequences=1)
 
 
