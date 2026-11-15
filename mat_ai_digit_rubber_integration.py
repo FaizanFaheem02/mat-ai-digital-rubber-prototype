@@ -20,6 +20,7 @@ from sentence_transformers import SentenceTransformer, util
 
 
 from rdflib import Graph, RDF, RDFS, OWL, URIRef, XSD
+import requests
 
 
 
@@ -552,6 +553,124 @@ def retrieve_wikidata_id(entity_uri):
 
     return str(wikidata_id).strip()
 
+# 14. RETRIEVE METADATA FROM WIKIDATA
+
+WIKIDATA_ENDPOINT = "https://query.wikidata.org/sparql"
+
+
+
+def retrieve_wikidata_metadata(wikidata_id):
+    """Retrieve description, instance of, and subclass of from Wikidata."""
+
+    if not wikidata_id:
+        return {}
+
+    # Support both Q-IDs and full Wikidata entity URIs.
+    wikidata_id = str(wikidata_id).strip().rstrip("/").split("/")[-1]
+
+    if not re.fullmatch(r"Q[1-9]\d*", wikidata_id):
+        logging.warning("Invalid Wikidata ID: %s", wikidata_id)
+        return {}
+
+    sparql_query = """
+    SELECT ?description
+           ?instanceOf ?instanceOfLabel
+           ?subclassOf ?subclassOfLabel
+    WHERE {
+        BIND(wd:WIKIDATA_ID AS ?entity)
+
+        OPTIONAL {
+            ?entity schema:description ?description .
+            FILTER(LANG(?description) = "en")
+        }
+
+        OPTIONAL {
+            ?entity wdt:P31 ?instanceOf .
+        }
+
+        OPTIONAL {
+            ?entity wdt:P279 ?subclassOf .
+        }
+
+        SERVICE wikibase:label {
+            bd:serviceParam wikibase:language "en".
+        }
+    }
+    """
+
+    query = sparql_query.replace("WIKIDATA_ID", wikidata_id)
+
+    try:
+        response = requests.get(
+            WIKIDATA_ENDPOINT,
+            params={
+                "query": query,
+                "format": "json"
+            },
+            headers={
+                "User-Agent": "DigiRubber/1.0 (research application)"
+            },
+            timeout=30
+        )
+
+        response.raise_for_status()
+
+        bindings = response.json()["results"]["bindings"]
+
+        metadata = {
+            "wikidata_id": wikidata_id,
+            "description": None,
+            "instance_of": [],
+            "subclass_of": []
+        }
+
+        for item in bindings:
+
+            # Retrieve English description.
+            if item.get("description"):
+                metadata["description"] = (
+                    item["description"]["value"]
+                )
+
+            # Retrieve Instance of (P31).
+            if item.get("instanceOfLabel"):
+                label = item["instanceOfLabel"]["value"]
+
+                if label not in metadata["instance_of"]:
+                    metadata["instance_of"].append(label)
+
+            # Retrieve Subclass of (P279).
+            if item.get("subclassOfLabel"):
+                label = item["subclassOfLabel"]["value"]
+
+                if label not in metadata["subclass_of"]:
+                    metadata["subclass_of"].append(label)
+
+        logging.info(
+            "Retrieved Wikidata metadata for %s: "
+            "description, %d instance(s), %d subclass(es)",
+            wikidata_id,
+            len(metadata["instance_of"]),
+            len(metadata["subclass_of"])
+        )
+
+        return metadata
+
+    except requests.RequestException:
+        logging.exception(
+            "Wikidata request failed for %s",
+            wikidata_id
+        )
+        return {}
+
+    except (ValueError, KeyError, TypeError):
+        logging.exception(
+            "Could not process Wikidata response for %s",
+            wikidata_id
+        )
+        return {}
+
+
 
 # 14. RETRIEVE CONFIGURED ENTITY METADATA
 
@@ -683,9 +802,28 @@ def process_question(question):
 
             class_metadata.update(retrieve_entity_metadata(entity_uri))
 
+            
             wikidata_id = retrieve_wikidata_id(entity_uri)
+
             if wikidata_id:
+
                 class_metadata["wikidata_id"] = wikidata_id
+
+                logging.info(
+                    "Retrieving Wikidata metadata for %s (%s)",
+                    original_entity,
+                    wikidata_id
+                )
+
+                wikidata_metadata = retrieve_wikidata_metadata(
+                    wikidata_id
+                )
+
+                if wikidata_metadata:
+                    class_metadata["wikidata_metadata"] = wikidata_metadata            
+
+
+
         else:
             logging.warning(
                 "STEP 3/5: Entity not found in DigiRubber ontology: %s",
@@ -735,7 +873,7 @@ def process_question(question):
 if __name__ == "__main__":
 
     questions = [
-        "What is the definition of rubber?"
+        "Who is the contributor to silane?"
     ]
 
     try:
