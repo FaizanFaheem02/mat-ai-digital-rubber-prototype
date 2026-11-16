@@ -573,9 +573,7 @@ def retrieve_wikidata_metadata(wikidata_id):
         return {}
 
     sparql_query = """
-    SELECT ?description
-           ?instanceOf ?instanceOfLabel
-           ?subclassOf ?subclassOfLabel
+    SELECT ?description ?instanceOf ?instanceOfLabel ?subclassOf ?subclassOfLabel
     WHERE {
         BIND(wd:WIKIDATA_ID AS ?entity)
 
