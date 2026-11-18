@@ -219,7 +219,7 @@ Return ONLY valid JSON:
 
 
 
-# 9. ONTOLOGY ENTITY NORMALIZATION
+# 8. ONTOLOGY ENTITY NORMALIZATION
 
 
 def normalize_entity(entity):
@@ -291,7 +291,7 @@ def normalize_entity(entity):
     return best["text"], best["uri"], "semantic_" + best["source"]
 
 
-# 10. RETRIEVE ONTOLOGY SYNONYMS
+# 9. RETRIEVE ONTOLOGY SYNONYMS
 
 
 
@@ -314,7 +314,7 @@ def retrieve_synonyms(entity_uri):
     return synonyms
 
 
-# 11. MATCH ONTOLOGY PROPERTY GLOBALLY
+# 10. MATCH ONTOLOGY PROPERTY GLOBALLY
 
 
 def match_ontology_property(relationship):
@@ -343,7 +343,6 @@ def match_ontology_property(relationship):
         candidates = []
         seen_predicates = set()
 
-        # Only consider resources explicitly declared as RDF/OWL properties.
         property_types = {
             RDF.Property,
             OWL.ObjectProperty,
@@ -403,7 +402,6 @@ def match_ontology_property(relationship):
                 "aliases": aliases,
             })
 
-        # Exact label/synonym/local-name matches are checked before embeddings.
         property_embedding_cache[cache_key] = candidates
 
     candidates = property_embedding_cache[cache_key]
@@ -412,7 +410,6 @@ def match_ontology_property(relationship):
         logging.warning("No global ontology property candidates were found.")
         return None
 
-    # First: exact match against labels, synonyms, or the predicate local name.
     for candidate in candidates:
         for alias in candidate["aliases"]:
             if relationship_key == alias.casefold():
@@ -473,7 +470,7 @@ def match_ontology_property(relationship):
     }
 
 
-# 12. RETRIEVE PROPERTY VALUES USING SPARQL
+# 11. RETRIEVE PROPERTY VALUES USING SPARQL
 
 
 
@@ -531,7 +528,7 @@ def retrieve_metadata(entity_uri, property_uri):
 
 
 
-# 13. RETRIEVE WIKIDATA ID INDEPENDENTLY
+# 12. RETRIEVE WIKIDATA ID INDEPENDENTLY
 
 def retrieve_wikidata_id(entity_uri):
     """Retrieve the Wikidata ID annotation for an ontology entity."""
@@ -543,7 +540,7 @@ def retrieve_wikidata_id(entity_uri):
 
     return str(wikidata_id).strip()
 
-# 14. RETRIEVE METADATA FROM WIKIDATA
+# 13. RETRIEVE METADATA FROM WIKIDATA
 
 WIKIDATA_ENDPOINT = "https://query.wikidata.org/sparql"
 
@@ -559,7 +556,6 @@ def retrieve_wikidata_metadata(wikidata_id):
     if not wikidata_id:
         return {"properties": []}
 
-    # Support both Q-IDs and full Wikidata entity URIs.
     wikidata_id = str(wikidata_id).strip().rstrip("/").split("/")[-1]
 
     if not re.fullmatch(r"Q[1-9]\d*", wikidata_id):
