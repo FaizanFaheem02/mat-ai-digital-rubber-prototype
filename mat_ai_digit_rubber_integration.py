@@ -64,7 +64,7 @@ entity_model = GLiNER.from_pretrained(GLINER_MODEL_NAME)
 logging.info("GLiNER Decoder loaded successfully.")
 
 
-# 4. LOAD QWEN
+# 4. LOAD QWEN & SENTENCE TRANSFORMER
 
 logging.info("Loading Qwen2.5-3B...")
 
@@ -289,30 +289,8 @@ def normalize_entity(entity):
     return best["text"], best["uri"], "semantic_" + best["source"]
 
 
-# 9. RETRIEVE ONTOLOGY SYNONYMS
 
-
-
-def retrieve_synonyms(entity_uri):
-
-
-
-    synonyms = []
-
-
-
-    for synonym in graph.objects(entity_uri, SYNONYM):
-
-
-
-        synonyms.append(str(synonym))
-
-
-
-    return synonyms
-
-
-# 10. MATCH ONTOLOGY PROPERTY GLOBALLY
+# 9. MATCH ONTOLOGY PROPERTY GLOBALLY
 
 
 def match_ontology_property(relationship):
@@ -468,7 +446,7 @@ def match_ontology_property(relationship):
     }
 
 
-# 11. RETRIEVE PROPERTY VALUES USING SPARQL
+# 10. RETRIEVE PROPERTY VALUES USING SPARQL
 
 
 
@@ -526,7 +504,7 @@ def retrieve_metadata(entity_uri, property_uri):
 
 
 
-# 12. RETRIEVE WIKIDATA ID INDEPENDENTLY
+# 11. RETRIEVE WIKIDATA ID INDEPENDENTLY
 
 def retrieve_wikidata_id(entity_uri):
     """Retrieve the Wikidata ID annotation for an ontology entity."""
@@ -538,7 +516,7 @@ def retrieve_wikidata_id(entity_uri):
 
     return str(wikidata_id).strip()
 
-# 13. RETRIEVE METADATA FROM WIKIDATA
+# 12. RETRIEVE METADATA FROM WIKIDATA
 
 WIKIDATA_ENDPOINT = "https://query.wikidata.org/sparql"
 
@@ -649,7 +627,7 @@ def retrieve_wikidata_metadata(wikidata_id):
 
 
 
-# 14. RETRIEVE CONFIGURED ENTITY METADATA
+# 13. RETRIEVE CONFIGURED ENTITY METADATA
 
 def retrieve_entity_metadata(entity_uri):
     metadata = {}
@@ -705,7 +683,7 @@ def retrieve_entity_metadata(entity_uri):
 
 
 
-# 15. PROCESS ONE QUESTION AND BUILD JSON
+# 14. PROCESS ONE QUESTION AND BUILD JSON
 
 
 
@@ -865,12 +843,12 @@ def process_wikidata(matched_entities):
 
 
 
-# 16. TEST QUESTIONS AND SCRIPT EXECUTION
+# 15. TEST QUESTIONS AND SCRIPT EXECUTION
 
 if __name__ == "__main__":
 
     questions = [
-        "Who is the contributor to silane?"
+        "Who is the definition of rubber?"
     ]
 
     try:
