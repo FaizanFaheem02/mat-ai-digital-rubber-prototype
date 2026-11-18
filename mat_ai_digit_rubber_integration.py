@@ -33,14 +33,12 @@ MIN_ENTITY_SIMILARITY = 0.75
 MIN_PROPERTY_SIMILARITY = 0.35
 
 
-
 PROJECT_DIR = Path(__file__).resolve().parent
 
 QWEN_MODEL_PATH = str(PROJECT_DIR / "models" / "qwen" / "qwen2.5-3b-instruct-q4_k_m.gguf")
 
 
 ONTOLOGY_PATH = PROJECT_DIR / "digitrubber-edit.owl"
-
 
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -76,7 +74,7 @@ qwen_model = Llama(model_path=QWEN_MODEL_PATH, n_ctx=2048, n_threads=8, verbose=
 
 logging.info("Qwen2.5-3B loaded successfully.")
 logging.info("Loading Sentence Transformer...")
-relationship_model = SentenceTransformer(SENTENCE_TRANSFORMER_MODEL_NAME)
+similarity_model = SentenceTransformer(SENTENCE_TRANSFORMER_MODEL_NAME)
 logging.info("Sentence Transformer loaded successfully.")
 property_embedding_cache = {}
 
@@ -262,12 +260,12 @@ def normalize_entity(entity):
             return candidate["text"], candidate["uri"], candidate["source"]
 
     candidate_texts = [item["text"] for item in candidates]
-    embeddings = relationship_model.encode(
+    embeddings = similarity_model.encode(
         candidate_texts,
         convert_to_tensor=True,
         normalize_embeddings=True
     )
-    query_embedding = relationship_model.encode(
+    query_embedding = similarity_model.encode(
         entity.strip(),
         convert_to_tensor=True,
         normalize_embeddings=True
@@ -428,12 +426,12 @@ def match_ontology_property(relationship):
         for alias in candidate["aliases"]:
             alias_records.append((candidate, alias))
 
-    alias_embeddings = relationship_model.encode(
+    alias_embeddings = similarity_model.encode(
         [alias for _, alias in alias_records],
         convert_to_tensor=True,
         normalize_embeddings=True,
     )
-    relationship_embedding = relationship_model.encode(
+    relationship_embedding = similarity_model.encode(
         relationship_text,
         convert_to_tensor=True,
         normalize_embeddings=True,
