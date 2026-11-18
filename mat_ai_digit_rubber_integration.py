@@ -2,8 +2,6 @@
 
 import json
 
-import yaml
-
 import rdflib
 
 import logging
@@ -43,7 +41,6 @@ QWEN_MODEL_PATH = str(PROJECT_DIR / "models" / "qwen" / "qwen2.5-3b-instruct-q4_
 
 ONTOLOGY_PATH = PROJECT_DIR / "digitrubber-edit.owl"
 
-CONFIG_PATH = PROJECT_DIR / "config.yaml"
 
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -106,14 +103,7 @@ SYNONYM = URIRef("http://purl.obolibrary.org/obo/IAO_0000118")
 WIKIDATA_ID = URIRef("http://purl.obolibrary.org/obo/DIGITRUBBER_1000063")
 
 
-# 6. LOAD YAML CONFIGURATION
-
-
-with open(CONFIG_PATH, "r", encoding="utf-8") as config_file:
-
-    config = yaml.safe_load(config_file)
-
-# 7. GLiNER ENTITY EXTRACTION
+# 6. GLiNER ENTITY EXTRACTION
 
 
 def extract_entities(question):
@@ -121,7 +111,7 @@ def extract_entities(question):
     return entity_model.predict_entities(question, labels=["label"], threshold=0.3, num_gen_sequences=1)
 
 
-# 8. QWEN RELATIONSHIP EXTRACTION
+# 7. QWEN RELATIONSHIP EXTRACTION
 
 
 def extract_relationships(question, extracted_entities):
@@ -560,40 +550,43 @@ WIKIDATA_ENDPOINT = "https://query.wikidata.org/sparql"
 
 
 def retrieve_wikidata_metadata(wikidata_id):
-    """Retrieve description, instance of, and subclass of from Wikidata."""
+    """Retrieve the IDs and English labels of properties used by a Wikidata entity.
+
+    Property values are deliberately not retrieved. MAT AI can decide later
+    which properties are relevant and whether their values need to be fetched.
+    """
 
     if not wikidata_id:
-        return {}
+        return {"properties": []}
 
     # Support both Q-IDs and full Wikidata entity URIs.
     wikidata_id = str(wikidata_id).strip().rstrip("/").split("/")[-1]
 
     if not re.fullmatch(r"Q[1-9]\d*", wikidata_id):
         logging.warning("Invalid Wikidata ID: %s", wikidata_id)
-        return {}
+        return {"properties": []}
 
     sparql_query = """
-    SELECT ?description ?instanceOf ?instanceOfLabel ?subclassOf ?subclassOfLabel
+    SELECT DISTINCT ?propertyId ?propertyLabel
     WHERE {
         BIND(wd:WIKIDATA_ID AS ?entity)
 
-        OPTIONAL {
-            ?entity schema:description ?description .
-            FILTER(LANG(?description) = "en")
-        }
+        # Find direct claims made by this entity.
+        ?entity ?claimPredicate ?value .
 
-        OPTIONAL {
-            ?entity wdt:P31 ?instanceOf .
-        }
+        # Map each direct-claim predicate to its Wikidata property entity.
+        ?property wikibase:directClaim ?claimPredicate .
 
-        OPTIONAL {
-            ?entity wdt:P279 ?subclassOf .
-        }
+        # Keep English property labels only.
+        ?property rdfs:label ?propertyLabel .
+        FILTER(LANG(?propertyLabel) = "en")
 
-        SERVICE wikibase:label {
-            bd:serviceParam wikibase:language "en".
-        }
+        BIND(
+            STRAFTER(STR(?property), "http://www.wikidata.org/entity/")
+            AS ?propertyId
+        )
     }
+    ORDER BY ?propertyId
     """
 
     query = sparql_query.replace("WIKIDATA_ID", wikidata_id)
@@ -612,44 +605,36 @@ def retrieve_wikidata_metadata(wikidata_id):
         )
 
         response.raise_for_status()
-
         bindings = response.json()["results"]["bindings"]
 
-        metadata = {
-            "wikidata_id": wikidata_id,
-            "description": None,
-            "instance_of": [],
-            "subclass_of": []
-        }
+        properties = []
+        seen_property_ids = set()
 
         for item in bindings:
+            property_id = item.get("propertyId", {}).get("value", "").strip()
+            property_label = item.get("propertyLabel", {}).get("value", "").strip()
 
-            # Retrieve English description.
-            if item.get("description"):
-                metadata["description"] = (
-                    item["description"]["value"]
-                )
+            if not property_id or not property_label:
+                continue
 
-            # Retrieve Instance of (P31).
-            if item.get("instanceOfLabel"):
-                label = item["instanceOfLabel"]["value"]
+            if not re.fullmatch(r"P[1-9]\d*", property_id):
+                continue
 
-                if label not in metadata["instance_of"]:
-                    metadata["instance_of"].append(label)
+            if property_id in seen_property_ids:
+                continue
 
-            # Retrieve Subclass of (P279).
-            if item.get("subclassOfLabel"):
-                label = item["subclassOfLabel"]["value"]
+            properties.append({
+                "property_id": property_id,
+                "property_label": property_label
+            })
+            seen_property_ids.add(property_id)
 
-                if label not in metadata["subclass_of"]:
-                    metadata["subclass_of"].append(label)
+        metadata = {"properties": properties}
 
         logging.info(
-            "Retrieved Wikidata metadata for %s: "
-            "description, %d instance(s), %d subclass(es)",
+            "Retrieved Wikidata property catalogue for %s: %d properties",
             wikidata_id,
-            len(metadata["instance_of"]),
-            len(metadata["subclass_of"])
+            len(properties)
         )
 
         return metadata
@@ -659,14 +644,14 @@ def retrieve_wikidata_metadata(wikidata_id):
             "Wikidata request failed for %s",
             wikidata_id
         )
-        return {}
+        return {"properties": []}
 
     except (ValueError, KeyError, TypeError):
         logging.exception(
             "Could not process Wikidata response for %s",
             wikidata_id
         )
-        return {}
+        return {"properties": []}
 
 
 
@@ -691,7 +676,6 @@ def retrieve_entity_metadata(entity_uri):
         if (predicate, RDF.type, annotation_property_type) not in graph:
             continue
 
-        # Get the annotation property's label, if available.
         property_labels = list(graph.objects(predicate, RDFS.label))
 
         english_labels = [
@@ -706,7 +690,6 @@ def retrieve_entity_metadata(entity_uri):
         else:
             property_name = predicate.split("/")[-1].split("#")[-1]
 
-        # Convert the property label into a JSON-friendly key.
         key = "".join(
             character.lower() if character.isalnum() else "_"
             for character in property_name
@@ -715,21 +698,16 @@ def retrieve_entity_metadata(entity_uri):
         while "__" in key:
             key = key.replace("__", "_")
 
-        # Preserve language distinctions for language-tagged values.
         language = getattr(value, "language", None)
         if language and language.lower() != "en":
             key = f"{key}_{language.lower()}"
 
-        # Preserve the value as text.
         annotation_values.setdefault(key, []).append(str(value))
 
-    # Keep single values as strings and multiple values as lists.
     for key, values in annotation_values.items():
         metadata[key] = values[0] if len(values) == 1 else values
 
     return metadata
-
-
 
 
 
@@ -738,13 +716,20 @@ def retrieve_entity_metadata(entity_uri):
 
 
 def process_question(question):
-    output = {"classes": {}, "properties": {}}
+    """
+    Process the question against the local Digital Rubber ontology only.
+
+    Returns:
+        ontology_output: JSON-ready local ontology metadata.
+        matched_entities: Mapping of extracted entity text to matched ontology URI.
+    """
+    ontology_output = {"classes": {}, "properties": {}}
 
     logging.info("=" * 70)
     logging.info("STARTING QUESTION: %s", question)
     logging.info("=" * 70)
 
-    logging.info("STEP 1/5: Extracting entities with GLiNER...")
+    logging.info("STEP 1/4: Extracting entities with GLiNER...")
     extracted_entities = extract_entities(question)
     entity_list = [
         item["text"].strip()
@@ -761,11 +746,11 @@ def process_question(question):
             )
     else:
         logging.warning("GLiNER did not extract any entities.")
-        return output
+        return ontology_output, {}
 
     logging.info("GLiNER entity list: %s", entity_list)
 
-    logging.info("STEP 2/5: Extracting relationships with Qwen...")
+    logging.info("STEP 2/4: Extracting relationships with Qwen...")
     relationship_list = extract_relationships(question, extracted_entities)
 
     if relationship_list:
@@ -777,7 +762,7 @@ def process_question(question):
     logging.info("Qwen relationship list: %s", relationship_list)
 
     matched_entities = {}
-    # STEP 3: Match and retrieve metadata for each entity independently.
+
     for original_entity in entity_list:
         logging.info("=" * 60)
         logging.info("PROCESSING ENTITY: %s", original_entity)
@@ -788,11 +773,10 @@ def process_question(question):
         class_metadata = {}
 
         if entity_uri:
-
             matched_entities[original_entity] = entity_uri
 
             logging.info(
-                "STEP 3/5: Ontology entity matched: '%s' -> '%s' (method: %s)",
+                "Ontology entity matched: '%s' -> '%s' (method: %s)",
                 original_entity,
                 normalized_entity,
                 match_method,
@@ -800,45 +784,27 @@ def process_question(question):
 
             class_metadata.update(retrieve_entity_metadata(entity_uri))
 
-            
+            # The Wikidata ID is an annotation stored in the local ontology.
+            # Keep the mapping ID here, but do not retrieve Wikidata metadata here.
             wikidata_id = retrieve_wikidata_id(entity_uri)
-
             if wikidata_id:
-
                 class_metadata["wikidata_id"] = wikidata_id
-
-                logging.info(
-                    "Retrieving Wikidata metadata for %s (%s)",
-                    original_entity,
-                    wikidata_id
-                )
-
-                wikidata_metadata = retrieve_wikidata_metadata(
-                    wikidata_id
-                )
-
-                if wikidata_metadata:
-                    class_metadata["wikidata_metadata"] = wikidata_metadata            
-
-
 
         else:
             logging.warning(
-                "STEP 3/5: Entity not found in DigiRubber ontology: %s",
+                "Entity not found in Digital Rubber ontology: %s",
                 original_entity,
             )
 
-        output["classes"][original_entity] = class_metadata
+        ontology_output["classes"][original_entity] = class_metadata
 
-
-    # STEP 4: Match relationships globally and retrieve their values.
     for relationship in relationship_list:
         logging.info(
-            "Matching Qwen relationship '%s' against all global ontology properties.",
+            "Matching Qwen relationship '%s' against ontology properties.",
             relationship,
         )
 
-        output["properties"][relationship] = {}
+        ontology_output["properties"][relationship] = {}
 
         property_match = match_ontology_property(relationship)
 
@@ -849,7 +815,7 @@ def process_question(question):
             for entity_name, entity_uri in matched_entities.items():
                 values = retrieve_metadata(
                     entity_uri,
-                    property_match["uri"]
+                    property_match["uri"],
                 )
 
                 if values:
@@ -858,11 +824,50 @@ def process_question(question):
             if property_values:
                 property_metadata["values"] = property_values
 
-            output["properties"][relationship] = property_metadata
+            ontology_output["properties"][relationship] = property_metadata
+
+    logging.info("Local ontology processing completed.")
+    return ontology_output, matched_entities
 
 
-    logging.info("Question processing completed.")
-    return output
+def process_wikidata(matched_entities):
+    """
+    Retrieve Wikidata metadata independently of process_question().
+
+    Args:
+        matched_entities: Mapping of extracted entity text to local ontology URI.
+
+    Returns:
+        A separate JSON-ready object containing Wikidata results.
+    """
+    wikidata_output = {"entities": {}}
+
+    for entity_name, entity_uri in matched_entities.items():
+        wikidata_id = retrieve_wikidata_id(entity_uri)
+
+        if not wikidata_id:
+            logging.info(
+                "No Wikidata ID is assigned to matched entity '%s'. Skipping.",
+                entity_name,
+            )
+            continue
+
+        logging.info(
+            "Independently retrieving Wikidata properties for %s (%s).",
+            entity_name,
+            wikidata_id,
+        )
+
+        wikidata_metadata = retrieve_wikidata_metadata(wikidata_id)
+
+        wikidata_output["entities"][entity_name] = {
+            "wikidata_id": wikidata_id,
+            "label": entity_name,
+            "properties": wikidata_metadata.get("properties", []),
+        }
+
+    logging.info("Wikidata processing completed.")
+    return wikidata_output
 
 
 
@@ -875,25 +880,33 @@ if __name__ == "__main__":
     ]
 
     try:
-        for question in questions:
+        for index, question in enumerate(questions, start=1):
 
-            result = process_question(question)
+            ontology_result, matched_entities = process_question(question)
 
-            print(
-                json.dumps(
-                    result,
-                    indent=4,
-                    ensure_ascii=False
-                )
+            wikidata_result = process_wikidata(matched_entities)
+
+            ontology_file = PROJECT_DIR / f"ontology_output_{index}.json"
+            wikidata_file = PROJECT_DIR / f"wikidata_output_{index}.json"
+
+            ontology_file.write_text(
+                json.dumps(ontology_result, indent=4, ensure_ascii=False),
+                encoding="utf-8",
             )
+            wikidata_file.write_text(
+                json.dumps(wikidata_result, indent=4, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+            print("\\n== LOCAL ONTOLOGY JSON ==\\n")
+            print(json.dumps(ontology_result, indent=4, ensure_ascii=False))
+
+            print("\\n== WIKIDATA JSON ==\\n")
+            print(json.dumps(wikidata_result, indent=4, ensure_ascii=False))
+
+            logging.info("Saved local ontology JSON to: %s", ontology_file)
+            logging.info("Saved Wikidata JSON to: %s", wikidata_file)
 
     finally:
         qwen_model.close()
         logging.info("Qwen model resources released.")
-
-  #  "What should we change in the material structure (polymer Mooney, MSR, cis/vinyl/styrene content) in order to increase rebound, but at the same time, have good processability?"           
-
- # "What is the definition of rubber?"
- # "What should we change in the material structure (polymer Mooney, MSR, cis/vinyl/styrene content) in order to increase rebound, but at the same time, have good processability?"        
- # "Who is the contributor to silane?"
- # "Is Die Swell dependent on any polymer-related property (polymer Mooney, MSR, microstructure)"
